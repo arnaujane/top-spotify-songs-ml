@@ -14,10 +14,10 @@ La font no documenta prou bé el criteri exacte de selecció ni quan es va obten
 
 Hi ha artistes amb més d’una cançó. Per simular l’avaluació amb **artistes no presents en l’entrenament**, agrupem per nom d’artista normalitzat i fem `GroupShuffleSplit(test_size=0.2, random_state=42)`. Això reserva el 20 % dels **artistes**, no necessàriament el 20 % de les files:
 
-| Conjunt | Cançons | Artistes |
-|---|---:|---:|
-| Desenvolupament | 471 | 147 |
-| Test reservat | 132 | 37 |
+| Conjunt         | Cançons | Artistes |
+| --------------- | -------:| --------:|
+| Desenvolupament | 471     | 147      |
+| Test reservat   | 132     | 37       |
 
 Cap nom d’artista normalitzat no apareix a tots dos conjunts. Aquest criteri no garanteix detectar totes les possibles variants de nom o col·laboracions i tampoc simula una predicció temporal.
 
@@ -25,22 +25,22 @@ Totes les xifres i figures de l’EDA següent corresponen a **desenvolupament**
 
 ## 3. Atributs
 
-| Atribut | Significat | Tipus |
-|---|---|---|
-| `title` | Títol de la cançó | Text |
-| `artist` | Nom de l’artista | Categòric |
-| `top genre` | Etiqueta de gènere | Categòric |
-| `year` | Any associat a la llista | Numèric discret |
-| `bpm` | Tempo en pulsacions per minut | Numèric |
-| `nrgy` | Energia | Numèric |
-| `dnce` | Ballabilitat | Numèric |
-| `dB` | Intensitat sonora, en decibels | Numèric |
-| `live` | Indicador de presència en directe | Numèric |
-| `val` | València musical | Numèric |
-| `dur` | Durada | Numèric |
-| `acous` | Acousticitat | Numèric |
-| `spch` | Presència de veu parlada | Numèric |
-| `pop` | Puntuació de popularitat | Objectiu numèric |
+| Atribut     | Significat                        | Tipus            |
+| ----------- | --------------------------------- | ---------------- |
+| `title`     | Títol de la cançó                 | Text             |
+| `artist`    | Nom de l’artista                  | Categòric        |
+| `top genre` | Etiqueta de gènere                | Categòric        |
+| `year`      | Any associat a la llista          | Numèric discret  |
+| `bpm`       | Tempo en pulsacions per minut     | Numèric          |
+| `nrgy`      | Energia                           | Numèric          |
+| `dnce`      | Ballabilitat                      | Numèric          |
+| `dB`        | Intensitat sonora, en decibels    | Numèric          |
+| `live`      | Indicador de presència en directe | Numèric          |
+| `val`       | València musical                  | Numèric          |
+| `dur`       | Durada                            | Numèric          |
+| `acous`     | Acousticitat                      | Numèric          |
+| `spch`      | Presència de veu parlada          | Numèric          |
+| `pop`       | Puntuació de popularitat          | Objectiu numèric |
 
 La descripció pública no aclareix tots els detalls de mesura ni el moment de càlcul de les variables. En particular, cal ser prudent en interpretar si una característica hauria estat disponible abans d’un ús hipotètic del model.
 
@@ -91,3 +91,23 @@ La regla de 1,5 vegades l’interval interquartílic assenyala, entre altres, **
 - Objectiu: estimar `pop` com a regressió. No es tracta de preveure l’èxit d’un llançament futur.
 - Predictors inicials: explorar les característiques musicals i decidir amb cura si incloure l’any i el gènere, en funció de la disponibilitat i la justificació. No utilitzarem l’índex, el títol ni el nom d’artista com a predictors inicials; l’artista sí que s’utilitza per separar i validar.
 - Mètrica proposada: MAE; baseline: mediana calculada només amb entrenament.
+
+## 10. Predictors i baseline
+
+Per començar, utilitzarem les nou característiques musicals: `bpm`, `nrgy`, `dnce`, `dB`, `live`, `val`, `dur`, `acous` i `spch`. La variable que volem predir és `pop`.
+
+No utilitzarem l’índex, el títol ni el nom de l’artista com a predictors. Reservem l’artista per agrupar les cançons durant la validació. De moment, tampoc no incloem `year` ni `top genre`: el moment en què s’ha calculat la popularitat no està documentat i moltes categories de gènere tenen poques cançons. Això és una decisió inicial que revisarem amb validació.
+
+La baseline prediu sempre la **mediana de popularitat de les dades d’entrenament**. Hem aplicat `GroupKFold` amb cinc folds, mantenint cada artista dins d’un sol fold. A cada iteració calculem la mediana amb els quatre folds d’entrenament i mesurem l’error absolut mitjà (MAE) sobre el fold de validació.
+
+| Fold | Cançons de validació | Mediana d’entrenament | MAE   |
+| ----:| --------------------:| ---------------------:| -----:|
+| 1    | 95                   | 70                    | 11,27 |
+| 2    | 94                   | 69                    | 10,90 |
+| 3    | 94                   | 69                    | 10,17 |
+| 4    | 94                   | 70                    | 10,45 |
+| 5    | 94                   | 69                    | 10,91 |
+
+![MAE de la baseline per fold](figures/07_baseline_mae.png)
+
+La popularitat `pop` s’expressa en una escala de 0 a 100 punts. El MAE mitjà és de **10,74 punts**, amb una desviació entre folds de **0,39 punts**. És el valor de referència que compararem amb els models fent servir els mateixos folds; un MAE més baix indica un error menor. El test reservat encara no s’ha utilitzat per a l’avaluació.
